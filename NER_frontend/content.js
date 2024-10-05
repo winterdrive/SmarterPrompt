@@ -211,7 +211,7 @@ function createButton(text, onClickHandler) {
 
 function handleCopyToClipboard(text) {
     navigator.clipboard.writeText(text)
-        .then(() => console.log('Text copied to clipboard'))
+        .then(() => alert('文字已複製到剪貼簿'))
         .catch(err => console.error('Could not copy text: ', err));
 }
 
