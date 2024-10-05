@@ -73,13 +73,13 @@ function handleBubbleClick(selectedText, bubble, existingDialogBox) {
             storeReferenceMap(data.masked_entities);
 
             const dialogBox = createDialogBox(data.masked_text);
-            appendButtonsToDialogBox(dialogBox, selectedText, data);
+            logMaskedEntities(data.masked_entities);
             document.body.appendChild(dialogBox);
 
-            // 限制只能通過十字箭頭進行拖曳
-            const dragHandle = createDragHandle(dialogBox);
-            dialogBox.appendChild(dragHandle);
-            makeDraggable(dragHandle, dialogBox);
+            // // 限制只能通過十字箭頭進行拖曳
+            // const dragHandle = createDragHandle(dialogBox);
+            // dialogBox.appendChild(dragHandle);
+            // makeDraggable(dragHandle, dialogBox);
 
             bubble.remove();  // Remove bubble after dialog box appears
         })
@@ -95,47 +95,97 @@ function createDialogBox(maskedText) {
         top: '50%',
         transform: 'translate(-50%, -50%)',
         background: 'white',
-        padding: '20px',
+        padding: '0',
         border: '1px solid #007BFF',
         borderRadius: '8px',
         zIndex: 1001,
         maxWidth: '400px',
-        maxHeight: '300px',
         minWidth: '200px',
         minHeight: '100px',
-        overflow: 'auto',
+        overflow: 'auto',  // 確保內容可以滾動
         boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
         fontFamily: 'Arial, sans-serif',
         textAlign: 'center'
     });
-    dialogBox.innerText = maskedText;
-    return dialogBox;
-}
 
-// 修改 appendButtonsToDialogBox，增加「還原原始文字」按鈕
-function appendButtonsToDialogBox(dialogBox, selectedText, data) {
+    // 創建 header 和按鈕的容器
+    const headerContainer = document.createElement('div');
+    Object.assign(headerContainer.style, {
+        display: 'flex',
+        flexDirection: 'column'
+    });
+
+    // 創建 header bar
+    const headerBar = document.createElement('div');
+    Object.assign(headerBar.style, {
+        width: '100%',
+        backgroundColor: '#007BFF',
+        color: 'white',
+        padding: '5px',
+        cursor: 'move',
+        textAlign: 'left',
+        position: 'relative',
+        borderTopLeftRadius: '8px',
+        borderTopRightRadius: '8px',
+        zIndex: 1002
+    });
+    headerBar.innerText = 'Smarter Prompt';
+
+    // 創建關閉按鈕
+    const closeButton = document.createElement('button');
+    closeButton.innerText = '✖';
+    Object.assign(closeButton.style, {
+        position: 'absolute',
+        right: '10px',
+        top: '3px',
+        background: 'transparent',
+        border: 'none',
+        color: 'white',
+        cursor: 'pointer',
+        fontSize: '16px'
+    });
+    closeButton.addEventListener('click', () => dialogBox.remove());
+
+    // 將關閉按鈕添加到 header bar
+    headerBar.appendChild(closeButton);
+    headerContainer.appendChild(headerBar);
+
+    // 創建按鈕容器
     const buttonContainer = document.createElement('div');
     Object.assign(buttonContainer.style, {
         display: 'flex',
         justifyContent: 'space-around',
-        marginBottom: '20px',
+        marginTop: '10px',
+        marginBottom: '10px',
     });
 
-    const copyButton = createButton('Copy to Clipboard', () => handleCopyToClipboard(data.masked_text));
-    const classifyButton = createButton('Classify Text', () => handleClassifyText(selectedText));
-    const closeButton = createButton('Close', () => dialogBox.remove());
-
-    // 新增還原原始文字按鈕
-    const restoreButton = createButton('Restore Original', () => {
-        const originalText = restoreOriginalText(data.masked_text);
+    // 創建各種按鈕
+    const copyButton = createButton('複製\n結果', () => handleCopyToClipboard(maskedText));
+    const classifyButton = createButton('再次\n確認', () => handleClassifyText(maskedText));
+    const improveButton = createButton('增強\n提示詞', () => handleImprovePromptTask(maskedText));
+    const restoreButton = createButton('復原\n資料', () => {
+        const originalText = restoreOriginalText(maskedText);
         alert(`Restored Text: ${originalText}`);
     });
 
-    buttonContainer.append(copyButton, classifyButton, restoreButton, closeButton);
-    dialogBox.append(buttonContainer);
+    buttonContainer.append(copyButton, restoreButton, classifyButton, improveButton);
+    headerContainer.appendChild(buttonContainer);
+    dialogBox.appendChild(headerContainer);
 
-    logMaskedEntities(data.masked_entities);
+    // 創建內容區
+    const content = document.createElement('div');
+    content.innerText = maskedText;
+    content.style.overflowY = 'auto';  // 允許內容區滾動
+    content.style.maxHeight = '200px';  // 限制內容區的最大高度
+    content.style.padding = '10px';  // 添加一些內邊距
+    dialogBox.appendChild(content);
+
+    // 為 header bar 啟用拖曳功能
+    makeDraggable(headerBar, dialogBox);
+
+    return dialogBox;
 }
+
 
 // 創建按鈕
 function createButton(text, onClickHandler) {
@@ -166,9 +216,18 @@ function handleCopyToClipboard(text) {
 }
 
 function handleClassifyText(selectedText) {
+    // TODO 透過 API 分類 selectedText，檢查是否還有可能的機敏資料未識別化
     chrome.runtime.sendMessage({action: 'classify', text: selectedText}, response => {
         console.log('Classification Result:', response);
         alert(`Classification Result: ${JSON.stringify(response)}`);
+    });
+}
+
+function handleImprovePromptTask(maskedText) {
+    // TODO 透過 API 改進 maskedText，API 回傳改進後的結果
+    chrome.runtime.sendMessage({action: 'improve', text: maskedText}, response => {
+        console.log('Improve Prompt Result:', response);
+        alert(`Improve Prompt Result: ${JSON.stringify(response)}`);
     });
 }
 
@@ -180,32 +239,25 @@ function logMaskedEntities(maskedEntities) {
     });
 }
 
-function createDragHandle(dialogBox) {
-    const dragHandle = document.createElement('div');
-    dragHandle.innerText = '⇔';
-    Object.assign(dragHandle.style, {
-        cursor: 'move',
-        position: 'absolute',
-        top: '0',
-        right: '0',
-        background: '#ccc',
-        padding: '5px',
-        border: '1px solid black'
-    });
-    return dragHandle;
-}
 
+// 將拖曳功能綁定到 header bar
 function makeDraggable(handle, dialogBox) {
     let isDragging = false, offsetX, offsetY;
 
     handle.addEventListener('mousedown', function (event) {
+        // 檢查 handle 和 dialogBox 是否存在
+        if (!dialogBox || !handle) {
+            console.log('等待模型生成結果中...');
+            return;
+        }
+
         isDragging = true;
-        const rect = dialogBox.getBoundingClientRect();
+        const rect = dialogBox.getBoundingClientRect(); // 這裡可能會報錯
         offsetX = event.clientX - rect.left;
         offsetY = event.clientY - rect.top;
 
         document.addEventListener('mousemove', onMouseMove);
-        event.stopPropagation();  // Prevent unwanted propagation
+        event.stopPropagation();  // 防止事件冒泡
     });
 
     document.addEventListener('mouseup', () => {
