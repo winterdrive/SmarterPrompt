@@ -21,12 +21,12 @@
 8.
     - [X] 新增複製鍵，可讓對話框內 (dialogBox) 的文字可一鍵複製至剪貼簿
 9.
-    - [ ] 導入 NER model，讓機敏文字可被替換成 masked text (暫時用 API)
+    - [X] 導入 NER model，讓機敏文字可被替換成 masked text (暫時用 API)
 10.
-    - [ ] 新增機敏文字 mask 前 (key) 及 mask 後 (value) 的 reference map 至 session storage，以便後續復原原文使用 (暫時用
+    - [X] 新增機敏文字 mask 前 (key) 及 mask 後 (value) 的 reference map 至 session storage，以便後續復原原文使用 (暫時用
       API)
 11.
     - [ ] 新增按鈕可讓使用者將 masked text 按 session storage 內的 reference map 轉換回原文字 (暫時用 API)
 
 12.
-    - [ ] 只能透過拖曳十字箭頭移動對話框 (dialogBox) 位置，不可透過其他位置拖曳移動
+    - [X] 只能透過拖曳十字箭頭移動對話框 (dialogBox) 位置，不可透過其他位置拖曳移動

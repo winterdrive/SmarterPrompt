@@ -3,10 +3,8 @@ document.addEventListener('mouseup', function (event) {
     let existingBubble = document.getElementById('selectionBubble');
     let existingDialogBox = document.getElementById('dialogBox');
 
-    // 如果點擊了泡泡以外的地方，且泡泡存在，則移除泡泡
     removeBubbleIfClickedOutside(event, existingBubble);
 
-    // 只在選擇文本時創建泡泡
     if (selectedText.length > 0) {
         existingBubble?.remove();  // Remove any existing bubble if present
         const bubble = createBubble(event.pageX, event.pageY);
@@ -47,13 +45,11 @@ function createBubble(x, y) {
     return bubble;
 }
 
-// 滑鼠懸停時標亮
 function handleMouseOver(bubble) {
     bubble.style.background = 'lightblue';  // Highlight on hover
     bubble.style.transform = 'scale(1.1)';  // Slightly enlarge
 }
 
-// 滑鼠不懸停時回復原狀
 function handleMouseOut(bubble) {
     bubble.style.background = 'blue';  // Revert color
     bubble.style.transform = 'scale(1)';  // Revert size
@@ -68,23 +64,26 @@ function handleBubbleClick(selectedText, bubble, existingDialogBox) {
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({string: selectedText})
     })
-    .then(response => response.json())
-    .then(data => {
-        console.log('Success:', data);
-        existingDialogBox?.remove();  // Remove existing dialog box
+        .then(response => response.json())
+        .then(data => {
+            console.log('Success:', data);
+            existingDialogBox?.remove();  // Remove existing dialog box
 
-        const dialogBox = createDialogBox(data.masked_text);
-        appendButtonsToDialogBox(dialogBox, selectedText, data);
-        document.body.appendChild(dialogBox);
+            // 將 masked_entities 存入 sessionStorage
+            storeReferenceMap(data.masked_entities);
 
-        // 限制只能通過十字箭頭進行拖曳
-        const dragHandle = createDragHandle(dialogBox);
-        dialogBox.appendChild(dragHandle);
-        makeDraggable(dragHandle, dialogBox);
+            const dialogBox = createDialogBox(data.masked_text);
+            appendButtonsToDialogBox(dialogBox, selectedText, data);
+            document.body.appendChild(dialogBox);
 
-        bubble.remove();  // Remove bubble after dialog box appears
-    })
-    .catch(error => console.error('Error:', error));
+            // 限制只能通過十字箭頭進行拖曳
+            const dragHandle = createDragHandle(dialogBox);
+            dialogBox.appendChild(dragHandle);
+            makeDraggable(dragHandle, dialogBox);
+
+            bubble.remove();  // Remove bubble after dialog box appears
+        })
+        .catch(error => console.error('Error:', error));
 }
 
 function createDialogBox(maskedText) {
@@ -97,32 +96,66 @@ function createDialogBox(maskedText) {
         transform: 'translate(-50%, -50%)',
         background: 'white',
         padding: '20px',
-        border: '1px solid black',
+        border: '1px solid #007BFF',
+        borderRadius: '8px',
         zIndex: 1001,
         maxWidth: '400px',
         maxHeight: '300px',
         minWidth: '200px',
         minHeight: '100px',
-        overflow: 'auto'
+        overflow: 'auto',
+        boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+        fontFamily: 'Arial, sans-serif',
+        textAlign: 'center'
     });
     dialogBox.innerText = maskedText;
     return dialogBox;
 }
 
+// 修改 appendButtonsToDialogBox，增加「還原原始文字」按鈕
 function appendButtonsToDialogBox(dialogBox, selectedText, data) {
+    const buttonContainer = document.createElement('div');
+    Object.assign(buttonContainer.style, {
+        display: 'flex',
+        justifyContent: 'space-around',
+        marginBottom: '20px',
+    });
+
     const copyButton = createButton('Copy to Clipboard', () => handleCopyToClipboard(data.masked_text));
     const classifyButton = createButton('Classify Text', () => handleClassifyText(selectedText));
     const closeButton = createButton('Close', () => dialogBox.remove());
 
-    dialogBox.append(copyButton, classifyButton, closeButton);
+    // 新增還原原始文字按鈕
+    const restoreButton = createButton('Restore Original', () => {
+        const originalText = restoreOriginalText(data.masked_text);
+        alert(`Restored Text: ${originalText}`);
+    });
+
+    buttonContainer.append(copyButton, classifyButton, restoreButton, closeButton);
+    dialogBox.append(buttonContainer);
 
     logMaskedEntities(data.masked_entities);
 }
 
+// 創建按鈕
 function createButton(text, onClickHandler) {
     const button = document.createElement('button');
     button.innerText = text;
+    Object.assign(button.style, {
+        backgroundColor: '#007BFF',
+        color: 'white',
+        border: 'none',
+        padding: '10px 20px',
+        borderRadius: '5px',
+        cursor: 'pointer',
+        fontSize: '14px',
+        transition: 'background-color 0.3s',
+        margin: '0 5px',
+        width: '120px'
+    });
     button.addEventListener('click', onClickHandler);
+    button.addEventListener('mouseover', () => button.style.backgroundColor = '#0056b3');
+    button.addEventListener('mouseout', () => button.style.backgroundColor = '#007BFF');
     return button;
 }
 
@@ -162,7 +195,6 @@ function createDragHandle(dialogBox) {
     return dragHandle;
 }
 
-// 使對話框只能通過十字箭頭進行拖曳
 function makeDraggable(handle, dialogBox) {
     let isDragging = false, offsetX, offsetY;
 
@@ -194,4 +226,20 @@ function makeDraggable(handle, dialogBox) {
             });
         }
     }
+}
+
+// 10. 將 mask 前的 key 和 mask 後的 value 儲存在 sessionStorage 中
+function storeReferenceMap(maskedEntities) {
+    const referenceMap = {};
+    maskedEntities.forEach(entity => {
+        referenceMap[entity.mask] = entity.original_value;
+    });
+    // 將 reference map 存儲到 sessionStorage
+    sessionStorage.setItem('referenceMap', JSON.stringify(referenceMap));
+}
+
+// 11. 將 masked text 根據 sessionStorage 中的 reference map 還原
+function restoreOriginalText(maskedText) {
+    // TODO
+    return "TODO";
 }
