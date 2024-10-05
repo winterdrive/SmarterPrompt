@@ -14,7 +14,30 @@ def load_models():
     return nlp_zh, nlp_en
 
 
+import re
+
+
 def mask_personal_info(text, nlp_zh, nlp_en):
+    """
+    This function takes a text string as input and processes it with two pre-trained models for Chinese and English.
+    It then extracts entities from both models and masks them with a label and serial number.
+    Additionally, it uses regular expressions to detect specific patterns such as phone numbers, email addresses, etc.
+    The function returns the original text, masked text, and a list of masked entities.
+
+    :param text:
+    :param nlp_zh:
+    :param nlp_en:
+    :return:
+        {
+          "raw_text": "John Doe emailed jane.doe@example.com on 2024-10-06.",
+          "masked_text": "[PERSON-0001] emailed [EMAIL-0001] on [DATE-0001].",
+          "masked_entities": [
+            {"mask": "[PERSON-0001]", "label": "PERSON", "original_value": "John Doe"},
+            {"mask": "[EMAIL-0001]", "label": "EMAIL", "original_value": "jane.doe@example.com"},
+            {"mask": "[DATE-0001]", "label": "DATE", "original_value": "2024-10-06"}
+          ]
+        }
+    """
     # Process text with both models
     doc_zh = nlp_zh(text)
     doc_en = nlp_en(text)
@@ -23,32 +46,54 @@ def mask_personal_info(text, nlp_zh, nlp_en):
     entities = list(doc_zh.ents) + list(doc_en.ents)
 
     # Define sensitive labels
-    sensitive_labels = ['PERSON', 'DATE', 'TIME', 'GPE', 'LOC', 'ORG', 'DATE',
-                        'MONEY', 'QUANTITY', 'ORDINAL', 'CARDINAL']
+    sensitive_labels = ['PERSON', 'DATE', 'TIME', 'GPE', 'LOC', 'ORG', 'MONEY',
+                        'QUANTITY', 'ORDINAL', 'CARDINAL']
 
-    # Mask detected entities
+    # Create dictionaries to store the counts of each entity type
+    entity_counts = {label: 0 for label in sensitive_labels}
+    masked_entities = []
+
+    # Mask detected entities with the label and serial number
     masked_text = text
     for ent in entities:
         if ent.label_ in sensitive_labels:
-            masked_text = masked_text.replace(ent.text, "***")
+            entity_counts[ent.label_] += 1
+            serial_number = f"{entity_counts[ent.label_]:04d}"  # Ensure leading zeros if needed
+            mask = f"[{ent.label_}-{serial_number}]"
+            masked_text = masked_text.replace(ent.text, mask)
+            masked_entities.append({'mask': mask, 'label': ent.label_, 'original_value': ent.text})
 
     # Additional patterns for phone numbers, email addresses, and other specific cases
     patterns = {
         'email': r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',
         'mobile': r'\+886-\d{2,3}-\d{3,4}-\d{3,4}|\+886\d{9,10}',
         'raw_mobile': r'\b0\d{9,10}\b|\b0\d{2}-\d{3}-\d{3}\b|\b0\d{2}-\d{3}\d{3}\b',
-        'raw_tel': r'\b0\d{1,2}-\d{8}\b|\b0\d{1,2}-\d{4}-\d{4}\b|\b0\d{1,2}-\d{3}-\d{4}\b|\b0\d{1,2}-\d{3}-\d{'
-                   r'5}\b',
+        'raw_tel': r'\b0\d{1,2}-\d{8}\b|\b0\d{1,2}-\d{4}-\d{4}\b|\b0\d{1,2}-\d{3}-\d{4}\b|\b0\d{1,2}-\d{3}-\d{5}\b',
         'tel': r'\+886-\d{1,2}-\d{3,4}-\d{4}|\+886\d{9,10}',
         'id_number': r'\b[A-Z]\d{9}\b',
         'ssn': r'\b\d{3}-\d{2}-\d{4}\b',
         'bank_account': r'\b\d{2}-\d{2}-\d{4,6}\b'
     }
 
+    # Count occurrences for pattern matches and mask them accordingly
+    pattern_counts = {key: 0 for key in patterns.keys()}
     for key, pattern in patterns.items():
-        masked_text = re.sub(pattern, '***', masked_text)
+        pattern_matches = re.findall(pattern, masked_text)
+        for match in pattern_matches:
+            pattern_counts[key] += 1
+            serial_number = f"{pattern_counts[key]:04d}"
+            mask = f"[{key.upper()}-{serial_number}]"
+            masked_text = masked_text.replace(match, mask)
+            masked_entities.append({'mask': mask, 'label': key.upper(), 'original_value': match})
 
-    return masked_text
+    # Return the result as an object with the raw text, masked text, and masked entities list
+    result = {
+        'raw_text': text,
+        'masked_text': masked_text,
+        'masked_entities': masked_entities
+    }
+
+    return result
 
 
 def main():
@@ -105,10 +150,22 @@ def main():
 
     nlp_zh, nlp_en = load_models()
     masked_text = mask_personal_info(mail_text, nlp_zh, nlp_en)
-    print(masked_text)
+    print(masked_text['raw_text'])
+    print(masked_text['masked_text'])
+    print(masked_text['masked_entities'])
     masked_text = mask_personal_info(donate_text, nlp_zh, nlp_en)
-    print(masked_text)
+    print(masked_text['raw_text'])
+    print(masked_text['masked_text'])
+    print(masked_text['masked_entities'])
 
 
 if __name__ == "__main__":
+    # print(spacy.explain('PERSON'))
+    # print(spacy.explain('MAIL'))
+    # spacy.explain(u'NORP')
+    # nlp_zh, nlp_en = load_models()
+    # doc = nlp_en(u'Hello world')
+    # for w in doc:
+    #     print(w.text, w.pos_, w.tag_, w.dep_)
     main()
+    pass
