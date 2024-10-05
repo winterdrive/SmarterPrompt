@@ -8,7 +8,7 @@ document.addEventListener('mouseup', function (event) {
 
     // 只在選擇文本時創建泡泡
     if (selectedText.length > 0) {
-        existingBubble?.remove();  // 如果已有泡泡存在，則移除
+        existingBubble?.remove();  // Remove any existing bubble if present
         const bubble = createBubble(event.pageX, event.pageY);
 
         document.body.appendChild(bubble);
@@ -76,7 +76,11 @@ function handleBubbleClick(selectedText, bubble, existingDialogBox) {
         const dialogBox = createDialogBox(data.masked_text);
         appendButtonsToDialogBox(dialogBox, selectedText, data);
         document.body.appendChild(dialogBox);
-        makeDraggable(dialogBox);
+
+        // 限制只能通過十字箭頭進行拖曳
+        const dragHandle = createDragHandle(dialogBox);
+        dialogBox.appendChild(dragHandle);
+        makeDraggable(dragHandle, dialogBox);
 
         bubble.remove();  // Remove bubble after dialog box appears
     })
@@ -143,14 +147,30 @@ function logMaskedEntities(maskedEntities) {
     });
 }
 
-// Drag functionality (used for both the bubble and dialog box)
-function makeDraggable(element) {
+function createDragHandle(dialogBox) {
+    const dragHandle = document.createElement('div');
+    dragHandle.innerText = '⇔';
+    Object.assign(dragHandle.style, {
+        cursor: 'move',
+        position: 'absolute',
+        top: '0',
+        right: '0',
+        background: '#ccc',
+        padding: '5px',
+        border: '1px solid black'
+    });
+    return dragHandle;
+}
+
+// 使對話框只能通過十字箭頭進行拖曳
+function makeDraggable(handle, dialogBox) {
     let isDragging = false, offsetX, offsetY;
 
-    element.addEventListener('mousedown', function (event) {
+    handle.addEventListener('mousedown', function (event) {
         isDragging = true;
-        offsetX = event.clientX - element.getBoundingClientRect().left;
-        offsetY = event.clientY - element.getBoundingClientRect().top;
+        const rect = dialogBox.getBoundingClientRect();
+        offsetX = event.clientX - rect.left;
+        offsetY = event.clientY - rect.top;
 
         document.addEventListener('mousemove', onMouseMove);
         event.stopPropagation();  // Prevent unwanted propagation
@@ -168,9 +188,9 @@ function makeDraggable(element) {
             requestAnimationFrame(() => {
                 const x = event.clientX - offsetX;
                 const y = event.clientY - offsetY;
-                element.style.left = `${x}px`;
-                element.style.top = `${y}px`;
-                element.style.transform = 'none';  // Reset translate effect
+                dialogBox.style.left = `${x}px`;
+                dialogBox.style.top = `${y}px`;
+                dialogBox.style.transform = 'none';  // 清除translate效果，保證拖曳位置正確
             });
         }
     }
