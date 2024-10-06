@@ -1,6 +1,6 @@
 // // background.js - Handles requests from the UI, runs the model, then sends back a response
 //
-// import { pipeline, env } from '@xenova/transformers';
+// import {pipeline, env} from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.6.0';
 //
 // // Skip initial check for local models, since we are not loading any local models.
 // env.allowLocalModels = false;
@@ -17,7 +17,7 @@
 //
 //     static async getInstance(progress_callback = null) {
 //         if (this.instance === null) {
-//             this.instance = pipeline(this.task, this.model, { progress_callback });
+//             this.instance = pipeline(this.task, this.model, {progress_callback});
 //         }
 //
 //         return this.instance;
@@ -42,34 +42,32 @@
 // //
 // // Add a listener to create the initial context menu items,
 // // context menu items only need to be created at runtime.onInstalled
+// // Ensure permissions are granted and contextMenus API is available
 // chrome.runtime.onInstalled.addListener(function () {
-//     // Register a context menu item that will only show up for selection text.
+//     // Create a context menu item that only shows up when text is selected.
 //     chrome.contextMenus.create({
 //         id: 'classify-selection',
 //         title: 'Classify "%s"',
 //         contexts: ['selection'],
 //     });
-// });
 //
-// // Perform inference when the user clicks a context menu
-// chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-//     // Ignore context menu clicks that are not for classifications (or when there is no input)
-//     if (info.menuItemId !== 'classify-selection' || !info.selectionText) return;
+//     // Add the click handler for the context menu.
+//     chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+//         if (info.menuItemId === 'classify-selection' && info.selectionText) {
+//             let result = await classify(info.selectionText);
 //
-//     // Perform classification on the selected text
-//     let result = await classify(info.selectionText);
-//
-//     // Do something with the result
-//     chrome.scripting.executeScript({
-//         target: { tabId: tab.id },    // Run in the tab that the user clicked in
-//         args: [result],               // The arguments to pass to the function
-//         function: (result) => {       // The function to run
-//             // NOTE: This function is run in the context of the web page, meaning that `document` is available.
-//             console.log('result', result)
-//             console.log('document', document)
-//         },
+//             // Execute a script on the current tab with the result.
+//             chrome.scripting.executeScript({
+//                 target: { tabId: tab.id },
+//                 args: [result],
+//                 function: (result) => {
+//                     console.log('result', result);
+//                 }
+//             });
+//         }
 //     });
 // });
+//
 // //////////////////////////////////////////////////////////////
 //
 // ////////////////////// 2. Message Events /////////////////////
