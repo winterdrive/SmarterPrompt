@@ -163,10 +163,10 @@ function createDialogBox(data) {
     });
 
     // 創建各種按鈕
-    const copyButton = createButton('複製\n結果', () => handleCopyToClipboard(maskedText));
-    const englishModelButton = createButton('英文\n模型', () => handleEnglishNER(maskedText)); //TODO
-    const improveButton = createButton('增強\n提示詞', () => handleImprovePromptTask(maskedText));
-    const restoreButton = createButton('取得\n原文', () => handleRestoreOriginalText(raw_text));
+    const copyButton = createButton('copyButton', '複製\n結果', () => handleCopyToClipboard(maskedText));
+    const englishModelButton = createButton('englishModelButton', '英文\n模型', () => handleEnglishNER(raw_text));
+    const improveButton = createButton('improveButton', '增強\n提示詞', () => handleImprovePromptTask(maskedText));
+    const restoreButton = createButton('restoreButton', '取得\n原文', () => handleRestoreOriginalText(raw_text));
 
     buttonContainer.append(copyButton, restoreButton, englishModelButton, improveButton);
     headerContainer.appendChild(buttonContainer);
@@ -174,6 +174,7 @@ function createDialogBox(data) {
 
     // 創建內容區
     const content = document.createElement('div');
+    content.id = 'dialogContent';
     content.innerText = maskedText;
     content.style.overflowY = 'auto';  // 允許內容區滾動
     content.style.maxHeight = '200px';  // 限制內容區的最大高度
@@ -188,8 +189,9 @@ function createDialogBox(data) {
 
 
 // 創建按鈕
-function createButton(text, onClickHandler) {
+function createButton(id, text, onClickHandler) {
     const button = document.createElement('button');
+    button.id = id;
     button.innerText = text;
     Object.assign(button.style, {
         backgroundColor: '#007BFF',
@@ -216,11 +218,25 @@ function handleCopyToClipboard(text) {
 }
 
 function handleEnglishNER(selectedText) {
-    // TODO 透過調用 mask API 並指定語言為英文，獲取 masked_text
-    chrome.runtime.sendMessage({action: 'classify', text: selectedText}, response => {
-        console.log('Classification Result:', response);
-        alert(`Classification Result: ${JSON.stringify(response)}`);
-    });
+    // 呼叫 API 並指定語言為英文
+    const dialogContent = document.getElementById('dialogContent');
+    dialogContent.innerText = '等待模型生成結果中...';
+    callMaskAPI(selectedText, 'en')
+        .then(data => {
+            const maskedText = data.masked_text;
+            // 使用 API 回傳的英文結果更新 UI
+            dialogContent.innerText = maskedText;
+
+            // 更新 "複製結果" 按鈕內的文字，讓新的 masked text 可以被複製
+            const copyButton = document.getElementById('copyButton');
+            if (copyButton) {
+                copyButton.onclick = () => handleCopyToClipboard(maskedText);
+            }
+
+            // Store masked_entities in sessionStorage
+            storeReferenceMap(data.masked_entities);
+        })
+        .catch(error => console.error('Error:', error));
 }
 
 function handleImprovePromptTask(maskedText) {
@@ -233,9 +249,9 @@ function handleImprovePromptTask(maskedText) {
 
 function logMaskedEntities(maskedEntities) {
     maskedEntities.forEach(entity => {
-        console.log(`Label: ${entity.label}`);
-        console.log(`Mask: ${entity.mask}`);
-        console.log(`Original Value: ${entity.original_value}`);
+        // console.log(`Label: ${entity.label}`);
+        // console.log(`Mask: ${entity.mask}`);
+        // console.log(`Original Value: ${entity.original_value}`);
     });
 }
 
@@ -282,6 +298,7 @@ function makeDraggable(handle, dialogBox) {
 
 // 10. 將 mask 前的 key 和 mask 後的 value 儲存在 sessionStorage 中
 function storeReferenceMap(maskedEntities) {
+    sessionStorage.clear(); // 運行前先清空 sessionStorage
     const referenceMap = {};
     maskedEntities.forEach(entity => {
         referenceMap[entity.mask] = entity.original_value;
