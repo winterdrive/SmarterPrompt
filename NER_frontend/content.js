@@ -64,7 +64,7 @@ function handleBubbleClick(selectedText, language, bubble, existingDialogBox) {
             // Store masked_entities in sessionStorage
             storeReferenceMap(data.masked_entities);
 
-            const dialogBox = createDialogBox(data.masked_text);
+            const dialogBox = createDialogBox(data);
             logMaskedEntities(data.masked_entities);
             document.body.appendChild(dialogBox);
 
@@ -80,14 +80,16 @@ function callMaskAPI(selectedText, language) {
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({string: selectedText, language: language})
     })
-    .then(response => response.json())
-    .catch(error => {
-        console.error('Error:', error);
-        throw error; // 傳遞錯誤到調用的地方
-    });
+        .then(response => response.json())
+        .catch(error => {
+            console.error('Error:', error);
+            throw error; // 傳遞錯誤到調用的地方
+        });
 }
 
-function createDialogBox(maskedText) {
+function createDialogBox(data) {
+    const maskedText = data.masked_text;
+    const raw_text = data.raw_text;
     const dialogBox = document.createElement('div');
     dialogBox.id = 'dialogBox';
     Object.assign(dialogBox.style, {
@@ -164,10 +166,7 @@ function createDialogBox(maskedText) {
     const copyButton = createButton('複製\n結果', () => handleCopyToClipboard(maskedText));
     const englishModelButton = createButton('英文\n模型', () => handleEnglishNER(maskedText)); //TODO
     const improveButton = createButton('增強\n提示詞', () => handleImprovePromptTask(maskedText));
-    const restoreButton = createButton('復原\n資料', () => {
-        const originalText = restoreOriginalText(maskedText);
-        alert(`Restored Text: ${originalText}`);
-    });
+    const restoreButton = createButton('取得\n原文', () => handleRestoreOriginalText(raw_text));
 
     buttonContainer.append(copyButton, restoreButton, englishModelButton, improveButton);
     headerContainer.appendChild(buttonContainer);
@@ -292,7 +291,9 @@ function storeReferenceMap(maskedEntities) {
 }
 
 // 11. 將 masked text 根據 sessionStorage 中的 reference map 還原
-function restoreOriginalText(maskedText) {
-    // TODO
-    return "TODO";
+function handleRestoreOriginalText(raw_text) {
+    // copy the raw_text to clipboard
+    navigator.clipboard.writeText(raw_text)
+        .then(() => alert('原文已複製到剪貼簿'))
+        .catch(err => console.error('Could not copy text: ', err));
 }
