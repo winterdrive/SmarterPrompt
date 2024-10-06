@@ -14,7 +14,7 @@ document.addEventListener('mouseup', function (event) {
         // Add event listeners for bubble interaction
         bubble.addEventListener('mouseover', () => handleMouseOver(bubble));
         bubble.addEventListener('mouseout', () => handleMouseOut(bubble));
-        bubble.addEventListener('click', () => handleBubbleClick(selectedText, bubble, existingDialogBox));
+        bubble.addEventListener('click', () => handleBubbleClick(selectedText, 'zh', bubble, existingDialogBox));
 
         makeDraggable(bubble);  // Make the bubble draggable
     }
@@ -56,34 +56,35 @@ function handleMouseOut(bubble) {
 }
 
 // 呼叫 API 並顯示對話框
-function handleBubbleClick(selectedText, bubble, existingDialogBox) {
-    console.log(selectedText);
-
-    fetch('http://127.0.0.1:5000/mask', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({string: selectedText})
-    })
-        .then(response => response.json())
+function handleBubbleClick(selectedText, language, bubble, existingDialogBox) {
+    callMaskAPI(selectedText, language)
         .then(data => {
-            console.log('Success:', data);
             existingDialogBox?.remove();  // Remove existing dialog box
 
-            // 將 masked_entities 存入 sessionStorage
+            // Store masked_entities in sessionStorage
             storeReferenceMap(data.masked_entities);
 
             const dialogBox = createDialogBox(data.masked_text);
             logMaskedEntities(data.masked_entities);
             document.body.appendChild(dialogBox);
 
-            // // 限制只能通過十字箭頭進行拖曳
-            // const dragHandle = createDragHandle(dialogBox);
-            // dialogBox.appendChild(dragHandle);
-            // makeDraggable(dragHandle, dialogBox);
-
             bubble.remove();  // Remove bubble after dialog box appears
         })
         .catch(error => console.error('Error:', error));
+}
+
+
+function callMaskAPI(selectedText, language) {
+    return fetch('http://127.0.0.1:5000/mask', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({string: selectedText, language: language})
+    })
+    .then(response => response.json())
+    .catch(error => {
+        console.error('Error:', error);
+        throw error; // 傳遞錯誤到調用的地方
+    });
 }
 
 function createDialogBox(maskedText) {
@@ -161,14 +162,14 @@ function createDialogBox(maskedText) {
 
     // 創建各種按鈕
     const copyButton = createButton('複製\n結果', () => handleCopyToClipboard(maskedText));
-    const classifyButton = createButton('再次\n確認', () => handleClassifyText(maskedText));
+    const englishModelButton = createButton('英文\n模型', () => handleEnglishNER(maskedText)); //TODO
     const improveButton = createButton('增強\n提示詞', () => handleImprovePromptTask(maskedText));
     const restoreButton = createButton('復原\n資料', () => {
         const originalText = restoreOriginalText(maskedText);
         alert(`Restored Text: ${originalText}`);
     });
 
-    buttonContainer.append(copyButton, restoreButton, classifyButton, improveButton);
+    buttonContainer.append(copyButton, restoreButton, englishModelButton, improveButton);
     headerContainer.appendChild(buttonContainer);
     dialogBox.appendChild(headerContainer);
 
@@ -215,8 +216,8 @@ function handleCopyToClipboard(text) {
         .catch(err => console.error('Could not copy text: ', err));
 }
 
-function handleClassifyText(selectedText) {
-    // TODO 透過 API 分類 selectedText，檢查是否還有可能的機敏資料未識別化
+function handleEnglishNER(selectedText) {
+    // TODO 透過調用 mask API 並指定語言為英文，獲取 masked_text
     chrome.runtime.sendMessage({action: 'classify', text: selectedText}, response => {
         console.log('Classification Result:', response);
         alert(`Classification Result: ${JSON.stringify(response)}`);
