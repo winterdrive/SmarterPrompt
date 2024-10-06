@@ -232,19 +232,16 @@ function handleEnglishNER(selectedText) {
             if (copyButton) {
                 copyButton.onclick = () => handleCopyToClipboard(maskedText);
             }
+            // 更新 "增強提示詞" 按鈕內的文字，讓新的 masked text 可以被複製
+            const improveButton = document.getElementById('improveButton');
+            if (improveButton) {
+                improveButton.onclick = () => handleImprovePromptTask(maskedText);
+            }
 
             // Store masked_entities in sessionStorage
             storeReferenceMap(data.masked_entities);
         })
         .catch(error => console.error('Error:', error));
-}
-
-function handleImprovePromptTask(maskedText) {
-    // TODO 透過 API 改進 maskedText，API 回傳改進後的結果
-    chrome.runtime.sendMessage({action: 'improve', text: maskedText}, response => {
-        console.log('Improve Prompt Result:', response);
-        alert(`Improve Prompt Result: ${JSON.stringify(response)}`);
-    });
 }
 
 function logMaskedEntities(maskedEntities) {
@@ -315,11 +312,20 @@ function handleRestoreOriginalText(raw_text) {
         .catch(err => console.error('Could not copy text: ', err));
 }
 
+function handleImprovePromptTask(maskedText) {
+    console.log('Improve Prompt Task is clicked');
+    const dialogContent = document.getElementById('dialogContent');
+    dialogContent.innerText = '等待模型生成結果中...';
+    const message = {
+        action: 'improve',
+        text: maskedText,
+    }
+    chrome.runtime.sendMessage(message, (response) => {
+        console.log('Improve Prompt Result:', response);
+        dialogContent.innerText = JSON.stringify(response);
+    });
+}
 
-// const message = {
-//     action: 'classify',
-//     text: 'text to classify',
-// }
-// chrome.runtime.sendMessage(message, (response) => {
-//     console.log('received user data', response)
-// });
+
+
+
