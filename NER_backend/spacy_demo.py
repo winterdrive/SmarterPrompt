@@ -7,26 +7,29 @@ import spacy
 import re
 
 
-def load_models():
-    # Load pre-trained models for both Chinese and English
-    nlp_zh = spacy.load("zh_core_web_trf")
-    nlp_en = spacy.load("en_core_web_trf")
-    return nlp_zh, nlp_en
-
-
-import re
-
-
-def mask_personal_info(text, nlp_zh, nlp_en):
+def load_model(language):
     """
-    This function takes a text string as input and processes it with two pre-trained models for Chinese and English.
-    It then extracts entities from both models and masks them with a label and serial number.
+    Load a pre-trained model for the specified language.
+    :param language: 'zh' for Chinese, 'en' for English
+    :return: Loaded spaCy model
+    """
+    if language == 'zh':
+        return spacy.load("zh_core_web_trf")
+    elif language == 'en':
+        return spacy.load("en_core_web_trf")
+    else:
+        raise ValueError("Unsupported language")
+
+
+def mask_personal_info(text, nlp):
+    """
+    This function takes a text string as input and processes it with a pre-trained model.
+    It then extracts entities from the model and masks them with a label and serial number.
     Additionally, it uses regular expressions to detect specific patterns such as phone numbers, email addresses, etc.
     The function returns the original text, masked text, and a list of masked entities.
 
     :param text:
-    :param nlp_zh:
-    :param nlp_en:
+    :param nlp:
     :return:
         {
           "raw_text": "John Doe emailed jane.doe@example.com on 2024-10-06.",
@@ -38,12 +41,8 @@ def mask_personal_info(text, nlp_zh, nlp_en):
           ]
         }
     """
-    # Process text with both models
-    doc_zh = nlp_zh(text)
-    doc_en = nlp_en(text)
-
-    # Merge entities from both models
-    entities = list(doc_zh.ents) + list(doc_en.ents)
+    # Process text with the model
+    doc = nlp(text)
 
     # Define sensitive labels
     sensitive_labels = ['PERSON', 'DATE', 'TIME', 'GPE', 'LOC', 'ORG', 'MONEY',
@@ -55,7 +54,7 @@ def mask_personal_info(text, nlp_zh, nlp_en):
 
     # Mask detected entities with the label and serial number
     masked_text = text
-    for ent in entities:
+    for ent in doc.ents:
         if ent.label_ in sensitive_labels:
             entity_counts[ent.label_] += 1
             serial_number = f"{entity_counts[ent.label_]:04d}"  # Ensure leading zeros if needed
@@ -148,12 +147,12 @@ def main():
     20,善心人士,500,1130404,0403地震災害指定捐款"
     """
 
-    nlp_zh, nlp_en = load_models()
-    masked_text = mask_personal_info(mail_text, nlp_zh, nlp_en)
+    nlp_zh = load_model('zh')
+    masked_text = mask_personal_info(mail_text, nlp_zh)
     print(masked_text['raw_text'])
     print(masked_text['masked_text'])
     print(masked_text['masked_entities'])
-    masked_text = mask_personal_info(donate_text, nlp_zh, nlp_en)
+    masked_text = mask_personal_info(donate_text, nlp_zh)
     print(masked_text['raw_text'])
     print(masked_text['masked_text'])
     print(masked_text['masked_entities'])
@@ -163,8 +162,8 @@ if __name__ == "__main__":
     # print(spacy.explain('PERSON'))
     # print(spacy.explain('MAIL'))
     # spacy.explain(u'NORP')
-    # nlp_zh, nlp_en = load_models()
-    # doc = nlp_en(u'Hello world')
+    # nlp_zh = load_model('zh')
+    # doc = nlp_zh(u'Hello world')
     # for w in doc:
     #     print(w.text, w.pos_, w.tag_, w.dep_)
     main()
