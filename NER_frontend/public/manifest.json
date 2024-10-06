@@ -10,9 +10,10 @@
   "description": "Make your prompt private and smart",
   "permissions": [
     "activeTab",
-    "storage",
+    "scripting",
     "contextMenus",
-    "scripting"
+    "storage",
+    "unlimitedStorage"
   ],
   "background": {
     "service_worker": "background.js",
@@ -31,7 +32,17 @@
       ]
     }
   ],
+  "minimum_chrome_version": "92",
   "action": {
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png"
+    },
+    "default_title": "Smarter Prompt",
     "default_popup": "popup.html"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'"
   }
 }

@@ -9,7 +9,7 @@ inputElement.addEventListener('input', (event) => {
 
     // Bundle the input data into a message.
     const message = {
-        action: 'classify',
+        action: 'ask-question',
         text: event.target.value,
     }
 

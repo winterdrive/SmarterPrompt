@@ -314,3 +314,12 @@ function handleRestoreOriginalText(raw_text) {
         .then(() => alert('原文已複製到剪貼簿'))
         .catch(err => console.error('Could not copy text: ', err));
 }
+
+
+// const message = {
+//     action: 'classify',
+//     text: 'text to classify',
+// }
+// chrome.runtime.sendMessage(message, (response) => {
+//     console.log('received user data', response)
+// });
