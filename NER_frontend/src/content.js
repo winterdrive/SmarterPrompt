@@ -57,20 +57,10 @@ function handleMouseOut(bubble) {
 
 // 呼叫 API 並顯示對話框
 function handleBubbleClick(selectedText, language, bubble, existingDialogBox) {
-    callMaskAPI(selectedText, language)
-        .then(data => {
-            existingDialogBox?.remove();  // Remove existing dialog box
-
-            // Store masked_entities in sessionStorage
-            storeReferenceMap(data.masked_entities);
-
-            const dialogBox = createDialogBox(data);
-            logMaskedEntities(data.masked_entities);
-            document.body.appendChild(dialogBox);
-
-            bubble.remove();  // Remove bubble after dialog box appears
-        })
-        .catch(error => console.error('Error:', error));
+    existingDialogBox?.remove();  // Remove existing dialog box
+    const dialogBox = createDialogBox(selectedText);
+    document.body.appendChild(dialogBox);
+    bubble.remove();  // Remove bubble after dialog box appears
 }
 
 
@@ -87,9 +77,7 @@ function callMaskAPI(selectedText, language) {
         });
 }
 
-function createDialogBox(data) {
-    const maskedText = data.masked_text;
-    const raw_text = data.raw_text;
+function createDialogBox(raw_text) {
     const dialogBox = document.createElement('div');
     dialogBox.id = 'dialogBox';
     Object.assign(dialogBox.style, {
@@ -155,6 +143,7 @@ function createDialogBox(data) {
 
     // 創建按鈕容器
     const buttonContainer = document.createElement('div');
+    buttonContainer.id = 'buttonContainer';
     Object.assign(buttonContainer.style, {
         display: 'flex',
         justifyContent: 'space-around',
@@ -162,20 +151,14 @@ function createDialogBox(data) {
         marginBottom: '10px',
     });
 
-    // 創建各種按鈕
-    const copyButton = createButton('copyButton', '複製\n結果', () => handleCopyToClipboard(maskedText));
-    const englishModelButton = createButton('englishModelButton', '英文\n模型', () => handleEnglishNER(raw_text));
-    const improveButton = createButton('improveButton', '增強\n提示詞', () => handleImprovePromptTask(maskedText));
-    const restoreButton = createButton('restoreButton', '取得\n原文', () => handleRestoreOriginalText(raw_text));
-
-    buttonContainer.append(copyButton, restoreButton, englishModelButton, improveButton);
+    // 設定 header bar 和按鈕容器
     headerContainer.appendChild(buttonContainer);
     dialogBox.appendChild(headerContainer);
 
     // 創建內容區
     const content = document.createElement('div');
     content.id = 'dialogContent';
-    content.innerText = maskedText;
+    content.innerText = raw_text;
     content.style.overflowY = 'auto';  // 允許內容區滾動
     content.style.maxHeight = '200px';  // 限制內容區的最大高度
     content.style.padding = '10px';  // 添加一些內邊距
@@ -184,7 +167,78 @@ function createDialogBox(data) {
     // 為 header bar 啟用拖曳功能
     makeDraggable(headerBar, dialogBox);
 
+    // 創建按鈕
+    refreshButton(buttonContainer, raw_text, null);
+
     return dialogBox;
+}
+
+function refreshButton(buttonContainer, raw_text, masked_text) {
+    // 若'copyButton'按鈕,'englishModelButton'按鈕,'improveButton'按鈕,'chineseModelButton'按鈕存在，則移除
+    let oldCopyButton = document.getElementById('copyButton');
+    let oldEnglishModelButton = document.getElementById('englishModelButton');
+    let oldImproveButton = document.getElementById('improveButton');
+    let oldChineseModelButton = document.getElementById('chineseModelButton');
+    oldCopyButton?.remove();
+    oldEnglishModelButton?.remove();
+    oldImproveButton?.remove();
+    oldChineseModelButton?.remove();
+
+    // 如果沒有 masked text，則 masked text = raw text
+    if (!masked_text) {
+        masked_text = raw_text;
+    }
+
+    // 創建各種按鈕，並將新按鈕添加到按鈕容器中
+    const copyButton = createButton('copyButton', '複製\n內文', () => handleCopyToClipboard(masked_text));
+    const englishModelButton = createButton('englishModelButton', '英文\n遮罩', () => handleEnglishNER(raw_text));
+    const improveButton = createButton('improveButton', '增強\n提示詞', () => handleImprovePromptTask(masked_text));
+    const chineseModelButton = createButton('chineseModelButton', '中文\n遮罩', () => handleChineseNER(raw_text));
+    buttonContainer.append(copyButton, chineseModelButton, englishModelButton, improveButton);
+}
+
+function handleCopyToClipboard(text) {
+    navigator.clipboard.writeText(text)
+        .then(() => alert('文字已複製到剪貼簿'))
+        .catch(err => console.error('Could not copy text: ', err));
+}
+
+function handleEnglishNER(selectedText) {
+    // 呼叫 API 並指定語言為英文
+    const dialogContent = document.getElementById('dialogContent');
+    dialogContent.innerText = '等待模型生成結果中...';
+    callMaskAPI(selectedText, 'en')
+        .then(data => {
+            const maskedText = data.masked_text;
+            // 使用 API 回傳的英文結果更新 UI
+            dialogContent.innerText = maskedText;
+
+            const buttonContainer = document.getElementById('buttonContainer');
+            refreshButton(buttonContainer, selectedText, maskedText);
+
+            // Store masked_entities in sessionStorage
+            storeReferenceMap(data.masked_entities);
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+function handleChineseNER(selectedText) {
+    // 呼叫 API 並指定語言為英文
+    const dialogContent = document.getElementById('dialogContent');
+    dialogContent.innerText = '等待模型生成結果中...';
+    callMaskAPI(selectedText, 'zh')
+        .then(data => {
+            const maskedText = data.masked_text;
+            // 使用 API 回傳的英文結果更新 UI
+            dialogContent.innerText = maskedText;
+
+            const buttonContainer = document.getElementById('buttonContainer');
+            refreshButton(buttonContainer, selectedText, maskedText);
+
+            // Store masked_entities in sessionStorage
+            storeReferenceMap(data.masked_entities);
+        })
+        .catch(error => console.error('Error:', error));
 }
 
 
@@ -211,38 +265,6 @@ function createButton(id, text, onClickHandler) {
     return button;
 }
 
-function handleCopyToClipboard(text) {
-    navigator.clipboard.writeText(text)
-        .then(() => alert('文字已複製到剪貼簿'))
-        .catch(err => console.error('Could not copy text: ', err));
-}
-
-function handleEnglishNER(selectedText) {
-    // 呼叫 API 並指定語言為英文
-    const dialogContent = document.getElementById('dialogContent');
-    dialogContent.innerText = '等待模型生成結果中...';
-    callMaskAPI(selectedText, 'en')
-        .then(data => {
-            const maskedText = data.masked_text;
-            // 使用 API 回傳的英文結果更新 UI
-            dialogContent.innerText = maskedText;
-
-            // 更新 "複製結果" 按鈕內的文字，讓新的 masked text 可以被複製
-            const copyButton = document.getElementById('copyButton');
-            if (copyButton) {
-                copyButton.onclick = () => handleCopyToClipboard(maskedText);
-            }
-            // 更新 "增強提示詞" 按鈕內的文字，讓新的 masked text 可以被複製
-            const improveButton = document.getElementById('improveButton');
-            if (improveButton) {
-                improveButton.onclick = () => handleImprovePromptTask(maskedText);
-            }
-
-            // Store masked_entities in sessionStorage
-            storeReferenceMap(data.masked_entities);
-        })
-        .catch(error => console.error('Error:', error));
-}
 
 function logMaskedEntities(maskedEntities) {
     maskedEntities.forEach(entity => {
@@ -322,10 +344,9 @@ function handleImprovePromptTask(maskedText) {
     }
     chrome.runtime.sendMessage(message, (response) => {
         console.log('Improve Prompt Result:', response);
-        dialogContent.innerText = JSON.stringify(response);
+        dialogContent.innerText = response;
+
+        const buttonContainer = document.getElementById('buttonContainer');
+        refreshButton(buttonContainer, maskedText, formattedResponse);
     });
 }
-
-
-
-
