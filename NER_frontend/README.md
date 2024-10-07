@@ -12,10 +12,13 @@
 2. **Text Improvement**: It can improve text prompts by leveraging a text-generation model.
     - In this version, the extension uses a simple text generation model (distilGPT2) by transformer.js to improve the
       text. Users can replace the model with a more advanced one to get better results.
-3. **Interactive UI**: Provides an interactive bubble and dialog box for user interaction, making it easy to mask and improve text directly from the web page. 
-    - In this version, users can copy masked text, switch to an English model for NER, improve prompts, and restore original text with a single click.
+3. **Interactive UI**: Provides an interactive bubble and dialog box for user interaction, making it easy to mask and
+   improve text directly from the web page.
+    - In this version, users can copy masked text, switch to an English model for NER, improve prompts, and restore
+      original text with a single click.
     - In this version, the dialog box is draggable, providing a flexible and user-friendly interface.
-    - In this version, clipboard integration allows users to copy masked or original text to the clipboard with a single click.
+    - In this version, clipboard integration allows users to copy masked or original text to the clipboard with a single
+      click.
 
 ### Reasons to Install:
 
@@ -30,13 +33,16 @@
 6. **Real-time Feedback**: Provides real-time feedback and results, enhancing the user experience.
 
 ### Development Guide:
+
 1. Install the frontend extension:
     ```bash
     git clone https://github.com/winterdrive/SmarterPrompt.git
     cd SmarterPrompt/NER_frontend/
     npm install 
-    npm run build 
+    npm run build
     ```
+   If you want to rebuild the extension, you can run `rm -rf node_modules` before running `npm install`.
+ 
 2. Add the extension to your browser. To do this, go to `chrome://extensions/`, enable developer mode (top right), and
    click "Load unpacked". Select the `build` directory from the dialog which appears and click "Select Folder".
 

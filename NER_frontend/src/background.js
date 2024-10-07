@@ -12,13 +12,11 @@ env.backends.onnx.wasm.numThreads = 1;
 
 
 class PipelineSingleton {
-    // static task = 'text-generation';
-    // static model = 'onnx-community/Llama-3.2-1B-Instruct';
     static task = 'text-generation';
-    static model = 'Xenova/distilgpt2';
-    // static model = 'Xenova/bert-base-NER';
-    // static task = 'text-classification';
-    // static model = 'Xenova/distilbert-base-uncased-finetuned-sst-2-english';
+    // static model = 'Xenova/distilgpt2'; // it works, but not very good
+    // static model = 'Xenova/llama-160m'; // it works, but not very good
+    static model = 'Xenova/Qwen1.5-0.5B-Chat'; // it works, and it's good
+    // static model = 'Xenova/bert-base-NER'; // haven't tried yet, it's an NER model
     static instance = null;
 
     static async getInstance(progress_callback = null) {
@@ -41,12 +39,11 @@ const improve = async (text) => {
 
     const messages = [
         {role: "system", content: "You are a helpful assistant for improving the prompt."},
-        {role: "user", content: `improve the following task prompt ${text}</prompt>`},
+        {role: "user", content: `improve the following task prompt: <prompt>${text}</prompt>`},
     ];
 
     // Actually run the model on the input text
     let result = await model(messages, {max_new_tokens: 128});
-    // let result = await model(text);
     return result;
 };
 
@@ -62,8 +59,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         // Perform classification
         let result = await improve(message.text);
 
-        // Send response back to UI
-        sendResponse(result);
+        // Extract the generated text (update based on your model's response structure)
+        let assistant_response = result[0].generated_text[2].content;
+
+        // Send the response back to content.js
+        sendResponse(assistant_response);
     })();
 
     // return true to indicate we will send a response asynchronously

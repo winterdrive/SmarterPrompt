@@ -1,4 +1,3 @@
-
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -39,7 +38,7 @@ const config = {
                     to: "styles.css"
                 }
             ],
-        })
+        }),
     ],
 };
 
