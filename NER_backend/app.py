@@ -5,15 +5,18 @@ from spacy_demo import load_model, mask_personal_info
 app = Flask(__name__)
 CORS(app)
 
+
 @app.route('/')
 def hello_world():
     return jsonify(message='Hello, World!')
+
 
 @app.route('/reverse', methods=['POST'])
 def reverse_string():
     data = request.get_json()
     reversed_string = data['string'][::-1]
     return jsonify(result_text=reversed_string)
+
 
 @app.route('/mask', methods=['POST'])
 def mask_text():
@@ -28,6 +31,7 @@ def mask_text():
     return jsonify(raw_text=raw_text,
                    masked_text=masked_text,
                    masked_entities=masked_entities)
+
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -50,40 +50,6 @@ const improve = async (text) => {
     return result;
 };
 
-////////////////////// 1. Context Menus //////////////////////
-//
-// Add a listener to create the initial context menu items,
-// context menu items only need to be created at runtime.onInstalled
-chrome.runtime.onInstalled.addListener(function () {
-    // Register a context menu item that will only show up for selection text.
-    chrome.contextMenus.create({
-        id: 'improve-selection',
-        title: 'Classify "%s"',
-        contexts: ['selection'],
-    });
-});
-
-// Perform inference when the user clicks a context menu
-chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-    // Ignore context menu clicks that are not for classifications (or when there is no input)
-    if (info.menuItemId !== 'improve-selection' || !info.selectionText) return;
-
-    // Perform classification on the selected text
-    let result = await improve(info.selectionText);
-
-    // Do something with the result
-    chrome.scripting.executeScript({
-        target: {tabId: tab.id},    // Run in the tab that the user clicked in
-        args: [result],               // The arguments to pass to the function
-        function: (result) => {       // The function to run
-            // NOTE: This function is run in the context of the web page, meaning that `document` is available.
-            console.log('result', result)
-            console.log('document', document)
-        },
-    });
-});
-//////////////////////////////////////////////////////////////
-
 ////////////////////// 2. Message Events /////////////////////
 //
 // Listen for messages from the UI, process it, and send the result back.
