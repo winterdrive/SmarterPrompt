@@ -1,5 +1,5 @@
 ## TODO List
-0. 請幫我撰寫回信給客訴者
+0. 請幫我撰寫回信
 1.
     - [X] 修改 bubble 的 click 事件，改為呼叫 FAKE API 取得 response，並顯示在對話框內
 2.

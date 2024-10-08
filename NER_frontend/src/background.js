@@ -16,6 +16,7 @@ class PipelineSingleton {
     // static model = 'Xenova/distilgpt2'; // it works, but not very good
     // static model = 'Xenova/llama-160m'; // it works, but not very good
     static model = 'Xenova/Qwen1.5-0.5B-Chat'; // it works, and it's good
+    // static model = 'Xenova/Qwen1.5-1.8B-Chat'; // it works, but not very good
     // static model = 'Xenova/bert-base-NER'; // haven't tried yet, it's an NER model
     static instance = null;
 
@@ -33,20 +34,14 @@ const improve = async (text, streamResponse) => {
     let model = await PipelineSingleton.getInstance();
 
     const messages = [
-        {role: "system", content: "你是一個專業的Prompt改進器。"},
+        {role: "system", content: "You are a professional prompt improver."},
         {
             role: "user",
-            content: `
-                給定一個原始的提示，請將其優化以提供更多的上下文，
-                並提高語言的清晰度和精確性，使結果更符合目標需求。
-                本次須改進的task prompt如下： 
-                <task>
-                ${text}
-                </task>
-                `
+            content:
+                `Please improve <task>${text}</task> to provide more context, and enhance the clarity and precision of the language to better meet the task requirements.`
         },
     ];
-
+    console.log('messages', messages);
     const callback_function = (beams) => {
         let partial_text = model.tokenizer.decode(beams[0].output_token_ids, {skip_special_tokens: true});
 
@@ -75,7 +70,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             if (assistantIndex !== -1) {
                 textUpdate = textUpdate.slice(assistantIndex + 'assistant'.length).trim();
             }
-            // textUpdate = assistant_resp[1].trim()
             chrome.tabs.sendMessage(sender.tab.id, {
                 action: 'streamUpdate',
                 text: textUpdate
