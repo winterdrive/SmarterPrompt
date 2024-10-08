@@ -29,13 +29,8 @@ class PipelineSingleton {
 }
 
 // Create generic classify function, which will be reused for the different types of events.
-const improve = async (text) => {
-    // Get the pipeline instance. This will load and build the model when run for the first time.
-    let model = await PipelineSingleton.getInstance((data) => {
-        // You can track the progress of the pipeline creation here.
-        // e.g., you can send `data` back to the UI to indicate a progress bar
-        // console.log('progress', data)
-    });
+const improve = async (text, streamResponse) => {
+    let model = await PipelineSingleton.getInstance();
 
     const messages = [
         {role: "system", content: "你是一個專業的Prompt改進器。"},
@@ -44,7 +39,7 @@ const improve = async (text) => {
             content: `
                 給定一個原始的提示，請將其優化以提供更多的上下文，
                 並提高語言的清晰度和精確性，使結果更符合目標需求。
-                本次須改信的task prompt如下： 
+                本次須改進的task prompt如下： 
                 <task>
                 ${text}
                 </task>
@@ -52,33 +47,52 @@ const improve = async (text) => {
         },
     ];
 
-    // Actually run the model on the input text
-    let result = await model(messages, {max_new_tokens: 128});
-    return result;
+    const callback_function = (beams) => {
+        let partial_text = model.tokenizer.decode(beams[0].output_token_ids, {skip_special_tokens: true});
+
+        // 過濾掉 "system" 和 "user" 等不必要的標籤
+        // partial_text = partial_text.replace(/(system|user|assistant)/g, '').trim();
+        // console.log('partial_text', partial_text);
+        streamResponse(partial_text);  // 傳回過濾後的片段
+    };
+
+    // 以流式回傳生成內容
+    await model(messages, {max_new_tokens: 128, callback_function});
 };
+
 
 ////////////////////// 2. Message Events /////////////////////
 //
 // Listen for messages from the UI, process it, and send the result back.
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    console.log('sender', sender)
-    if (message.action !== 'improve') return; // Ignore messages that are not meant for classification.
+    if (message.action !== 'improve') return; // Ignore other actions
 
-    // Run model prediction asynchronously
+    // Stream text as it is generated
     (async function () {
-        // Perform classification
-        let result = await improve(message.text);
+        const streamResponse = (textUpdate) => {
+            // 只傳送 assistant 角色內容
+            const assistantIndex = textUpdate.indexOf('assistant');
+            if (assistantIndex !== -1) {
+                textUpdate = textUpdate.slice(assistantIndex + 'assistant'.length).trim();
+            }
+            // textUpdate = assistant_resp[1].trim()
+            chrome.tabs.sendMessage(sender.tab.id, {
+                action: 'streamUpdate',
+                text: textUpdate
+            });
+        };
 
-        // Extract the generated text (update based on your model's response structure)
-        let assistant_response = result[0].generated_text[2].content;
+        // Perform the streaming task
+        await improve(message.text, streamResponse);
 
-        // Send the response back to content.js
-        sendResponse(assistant_response);
+        // Notify completion
+        chrome.tabs.sendMessage(sender.tab.id, {
+            action: 'streamComplete',
+            text: 'Text generation complete'
+        });
     })();
 
-    // return true to indicate we will send a response asynchronously
-    // see https://stackoverflow.com/a/46628145 for more information
-    return true;
+    return true;  // Keeps the connection open for asynchronous response
 });
 //////////////////////////////////////////////////////////////
 

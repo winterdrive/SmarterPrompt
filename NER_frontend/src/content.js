@@ -341,12 +341,17 @@ function handleImprovePromptTask(maskedText) {
     const message = {
         action: 'improve',
         text: maskedText,
-    }
-    chrome.runtime.sendMessage(message, (response) => {
-        console.log('Improve Prompt Result:', response);
-        dialogContent.innerText = response;
+    };
 
-        const buttonContainer = document.getElementById('buttonContainer');
-        refreshButton(buttonContainer, maskedText, formattedResponse);
+    // Send message to background.js to start the process
+    chrome.runtime.sendMessage(message);
+
+    // Listen for streaming updates
+    chrome.runtime.onMessage.addListener((response) => {
+        if (response.action === 'streamUpdate') {
+            dialogContent.innerText = response.text;  // Append partial result
+        } else if (response.action === 'streamComplete') {
+            console.log('Generation complete');
+        }
     });
 }
