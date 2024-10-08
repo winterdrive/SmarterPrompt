@@ -38,8 +38,18 @@ const improve = async (text) => {
     });
 
     const messages = [
-        {role: "system", content: "You are a helpful assistant for improving the prompt."},
-        {role: "user", content: `improve the following task prompt: <prompt>${text}</prompt>`},
+        {role: "system", content: "你是一個專業的Prompt改進器。"},
+        {
+            role: "user",
+            content: `
+                給定一個原始的提示，請將其優化以提供更多的上下文，
+                並提高語言的清晰度和精確性，使結果更符合目標需求。
+                本次須改信的task prompt如下： 
+                <task>
+                ${text}
+                </task>
+                `
+        },
     ];
 
     // Actually run the model on the input text

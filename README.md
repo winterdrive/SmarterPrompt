@@ -1,5 +1,3 @@
-20241008 Winston 唐聖凱
-
 ## TODO List
 
 1.
