@@ -38,7 +38,9 @@ const improve = async (text, streamResponse) => {
         {
             role: "user",
             content:
-                `Please improve <task>${text}</task> to provide more context, and enhance the clarity and precision of the language to better meet the task requirements.`
+`Please first identify the meaning of the task description <description>${text}</description>, 
+and then improve the task description <description>${text}</description> to provide more context, 
+and enhance the clarity and precision of the language to better meet the task requirements.`
         },
     ];
     console.log('messages', messages);
